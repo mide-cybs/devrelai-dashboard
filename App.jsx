@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 // ═══════════════════════════════════════════════════════════════════════════
 // DevRel AI — Combined App
 // Onboarding wizard → Dashboard with live backend connection
-// Backend: https://44a06702-3fd9-4728-aeb8-384d921a51ef-00-xu125dii6n5c.riker.replit.dev
+// Backend: https://devad-backend-production.up.railway.app/
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function App() {
