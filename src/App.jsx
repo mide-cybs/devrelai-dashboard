@@ -20,7 +20,12 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       const config = saved ? JSON.parse(saved) : null;
-      return config && config.orgId ? "dashboard" : "landing";
+      if (config && config.orgId) return "dashboard";
+      // Also jump to dashboard if Discord was connected (even without full onboarding)
+      const discord = localStorage.getItem("devad_discord_connection");
+      const dc = discord ? JSON.parse(discord) : null;
+      if (dc && dc.connected) return "dashboard";
+      return "landing";
     } catch { return "landing"; }
   });
 
@@ -504,7 +509,7 @@ function StepDot({ n, active, done }) {
 }
 
 /* ─── STEP 1: Connect Docs ─────────────────────────────────────────────── */
-function Step1({ onNext }) {
+function Step1({ onNext, onSkip }) {
   const [url, setUrl]               = useState("");
   const [crawling, setCrawling]     = useState(false);
   const [progress, setProgress]     = useState(0);
@@ -597,23 +602,30 @@ function Step1({ onNext }) {
         </div>
       )}
 
-      <button onClick={() => onNext({ docsUrl: url, pageCount: total })} disabled={!done}
-        style={{ alignSelf: "flex-end", padding: "12px 28px", borderRadius: 10, border: "none",
-          cursor: done ? "pointer" : "default", fontSize: 14, fontWeight: 600,
-          background: done ? `linear-gradient(135deg,${CO.accent},#005FA3)` : CO.border,
-          color: done ? "#fff" : CO.t3, transition: "all .2s" }}>
-        Continue →
-      </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button onClick={onSkip}
+          style={{ padding: "12px 20px", borderRadius: 10, border: `1px solid ${CO.border}`,
+            background: "transparent", color: CO.t2, fontSize: 14, cursor: "pointer" }}>
+          Skip for now →
+        </button>
+        <button onClick={() => onNext({ docsUrl: url, pageCount: total })} disabled={!done}
+          style={{ padding: "12px 28px", borderRadius: 10, border: "none",
+            cursor: done ? "pointer" : "default", fontSize: 14, fontWeight: 600,
+            background: done ? `linear-gradient(135deg,${CO.accent},#005FA3)` : CO.border,
+            color: done ? "#fff" : CO.t3, transition: "all .2s" }}>
+          Continue →
+        </button>
+      </div>
     </div>
   );
 }
 
 /* ─── STEP 2: Connect Community ────────────────────────────────────────── */
-function Step2({ onNext, onBack, orgId }) {
-  const [serverId, setServerId]   = useState("");
-  const [channel, setChannel]     = useState("#help");
+function Step2({ onNext, onBack, orgId, savedDiscord }) {
+  const [serverId, setServerId]   = useState(savedDiscord?.serverId || "");
+  const [channel, setChannel]     = useState(savedDiscord?.channel || "#help");
   const [serverName, setServerName] = useState("");
-  const [status, setStatus]       = useState("idle"); // idle | saving | connected | error
+  const [status, setStatus]       = useState(savedDiscord?.connected ? "connected" : "idle");
   const [errorMsg, setErrorMsg]   = useState("");
 
   // Discord bot invite link — opens Discord's official OAuth modal
@@ -1123,6 +1135,8 @@ function Launched({ config, onOpenDashboard }) {
 }
 
 /* ─── ROOT ────────────────────────────────────────────────────────────── */
+const DISCORD_KEY = "devad_discord_connection";
+
 function Onboarding({ onLaunch: onLaunchExternal, onGoToLanding }) {
   const [step, setStep]     = useState(1);
   const [config, setConfig] = useState({});
@@ -1135,8 +1149,21 @@ function Onboarding({ onLaunch: onLaunchExternal, onGoToLanding }) {
     { n: 4, label: "Test Live"        },
   ];
 
-  function next(data) { setConfig(p => ({ ...p, ...data })); setStep(s => s + 1); }
+  function next(data) {
+    const updated = { ...config, ...data };
+    setConfig(updated);
+    // Persist Discord connection so we never ask again
+    if (data.serverId || data.connected?.discord) {
+      try { localStorage.setItem(DISCORD_KEY, JSON.stringify({
+        serverId: data.serverId || config.serverId,
+        channel: data.channels?.discord || config.channels?.discord || "#help",
+        connected: true,
+      })); } catch {}
+    }
+    setStep(s => s + 1);
+  }
   function back()     { setStep(s => s - 1); }
+  function skipStep1() { setConfig(p => ({ ...p, docsSkipped: true })); setStep(2); }
 
   return (
     <div style={{ width: "100%", minHeight: "100vh", background: CO.bg,
@@ -1179,8 +1206,8 @@ function Onboarding({ onLaunch: onLaunchExternal, onGoToLanding }) {
 
             {/* step content */}
             <div style={{ background: CO.surface, border: `1px solid ${CO.border}`, borderRadius: 16, padding: 28 }}>
-              {step === 1 && <Step1 onNext={next} />}
-              {step === 2 && <Step2 onNext={next} onBack={back} orgId={config.orgId || ORG_ID} />}
+              {step === 1 && <Step1 onNext={next} onSkip={skipStep1} />}
+              {step === 2 && <Step2 onNext={next} onBack={back} orgId={config.orgId || ORG_ID} savedDiscord={(() => { try { const s = localStorage.getItem(DISCORD_KEY); return s ? JSON.parse(s) : null; } catch { return null; } })()} />}
               {step === 3 && <Step3 onNext={next} onBack={back} />}
               {step === 4 && <Step4 config={config} onLaunch={() => setLaunched(true)} />}
             </div>
