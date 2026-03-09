@@ -1481,6 +1481,8 @@ function FeedTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
+  const [answer, setAnswer] = useState(null);
+  const [answerLoading, setAnswerLoading] = useState(false);
 
   const [fetchError, setFetchError] = useState("");
   const [lastFetch, setLastFetch] = useState(null);
@@ -1508,6 +1510,18 @@ function FeedTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
     const interval = setInterval(fetchQuestions, 15000);
     return () => clearInterval(interval);
   }, [orgId]);
+
+  // Fetch answer whenever a question is selected
+  useEffect(() => {
+    if (!selected) { setAnswer(null); return; }
+    setAnswerLoading(true);
+    setAnswer(null);
+    fetch(`${BACKEND_URL}/questions/${orgId}/${selected.id}/response`)
+      .then(r => r.json())
+      .then(data => setAnswer(data))
+      .catch(() => setAnswer({ answer: null }))
+      .finally(() => setAnswerLoading(false));
+  }, [selected?.id]);
 
   const filtered = filter === "all" ? questions : questions.filter(q => q.status === filter);
   const platformIcon = { discord: "💬", slack: "⚡", github: "🐙", dashboard: "🖥️" };
@@ -1602,10 +1616,47 @@ function FeedTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
             <button onClick={() => setSelected(null)}
               style={{ marginLeft: "auto", background: "none", border: "none", color: C.t2, cursor: "pointer", fontSize: 18 }}>×</button>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Question bubble */}
             <Card style={{ padding: 14 }}>
-              <p style={{ margin: "0 0 6px", fontSize: 11, color: C.t3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Question</p>
+              <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: C.t3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                💬 Question
+              </p>
               <p style={{ margin: 0, fontSize: 14, color: C.t1, lineHeight: 1.6 }}>{selected.content}</p>
+              <p style={{ margin: "10px 0 0", fontSize: 11, color: C.t3 }}>
+                {selected.platform} · {selected.channel} · {selected.created_at ? new Date(selected.created_at).toLocaleString() : ""}
+              </p>
+            </Card>
+
+            {/* Answer bubble */}
+            <Card style={{ padding: 14, border: `1px solid ${C.green}30`, background: C.greenDim }}>
+              <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: C.green, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                🤖 DEVAD Answer
+              </p>
+              {answerLoading ? (
+                <p style={{ margin: 0, fontSize: 13, color: C.t3 }}>Loading answer…</p>
+              ) : answer?.answer ? (
+                <>
+                  <p style={{ margin: 0, fontSize: 14, color: C.t1, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{answer.answer}</p>
+                  {answer.confidence_score && (
+                    <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 11, color: C.t3 }}>Confidence:</span>
+                      <div style={{ flex: 1, height: 4, borderRadius: 4, background: C.border, overflow: "hidden" }}>
+                        <div style={{ width: `${answer.confidence_score}%`, height: "100%", borderRadius: 4,
+                          background: answer.confidence_score >= 80 ? C.green : answer.confidence_score >= 60 ? C.amber : C.red }} />
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 600,
+                        color: answer.confidence_score >= 80 ? C.green : answer.confidence_score >= 60 ? C.amber : C.red }}>
+                        {answer.confidence_score}%
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p style={{ margin: 0, fontSize: 13, color: C.t3, fontStyle: "italic" }}>
+                  No answer recorded yet — this question may have been escalated to your team.
+                </p>
+              )}
             </Card>
           </div>
         </div>
