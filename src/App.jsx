@@ -6,13 +6,34 @@ import { useState, useRef, useEffect } from "react";
 // Backend: https://devad-backend-production.up.railway.app
 // ═══════════════════════════════════════════════════════════════════════════
 
+const STORAGE_KEY = "devad_agent_config";
+
 export default function App() {
-  const [screen, setScreen] = useState("landing");
-  const [agentConfig, setAgentConfig] = useState({});
+  const [agentConfig, setAgentConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  const [screen, setScreen] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const config = saved ? JSON.parse(saved) : null;
+      return config && config.orgId ? "dashboard" : "landing";
+    } catch { return "landing"; }
+  });
 
   function handleLaunch(config) {
     setAgentConfig(config);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch {}
     setScreen("dashboard");
+  }
+
+  function handleLogout() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    setAgentConfig({});
+    setScreen("landing");
   }
 
   if (screen === "landing") {
@@ -26,7 +47,7 @@ export default function App() {
   if (screen === "onboarding") {
     return <Onboarding onLaunch={handleLaunch} onGoToLanding={() => setScreen("landing")} />;
   }
-  return <Dashboard agentConfig={agentConfig} orgId={agentConfig.orgId} onGoToOnboarding={() => setScreen("onboarding")} />;
+  return <Dashboard agentConfig={agentConfig} orgId={agentConfig.orgId} onGoToOnboarding={() => setScreen("onboarding")} onLogout={handleLogout} />;
 }
 
 // ═══ LANDING PAGE ══════════════════════════════════════════════════════════
@@ -1434,21 +1455,32 @@ function FeedTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
 
+  const [fetchError, setFetchError] = useState("");
+  const [lastFetch, setLastFetch] = useState(null);
+
   useEffect(() => {
     async function fetchQuestions() {
+      setFetchError("");
       try {
         const res = await fetch(`${BACKEND_URL}/questions/${orgId}?limit=50`);
+        if (!res.ok) {
+          setFetchError(`Backend returned ${res.status} — check Railway logs.`);
+          setLoading(false);
+          return;
+        }
         const data = await res.json();
         setQuestions(Array.isArray(data) ? data : []);
+        setLastFetch(new Date());
       } catch (e) {
+        setFetchError(`Could not reach backend: ${e.message}`);
         setQuestions([]);
       }
       setLoading(false);
     }
     fetchQuestions();
-    const interval = setInterval(fetchQuestions, 30000); // refresh every 30s
+    const interval = setInterval(fetchQuestions, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [orgId]);
 
   const filtered = filter === "all" ? questions : questions.filter(q => q.status === filter);
   const platformIcon = { discord: "💬", slack: "⚡", github: "🐙", dashboard: "🖥️" };
@@ -1466,19 +1498,44 @@ function FeedTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, animation: "pulse 2s infinite" }} />
-            <span style={{ fontSize: 12, color: C.t2 }}>Live</span>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 11, color: C.t3 }}>org: <code style={{ color: C.t2 }}>{orgId.slice(0,8)}…</code></span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: fetchError ? "#FF4D6A" : C.green, animation: "pulse 2s infinite" }} />
+              <span style={{ fontSize: 12, color: fetchError ? "#FF4D6A" : C.t2 }}>{fetchError ? "Error" : "Live"}</span>
+            </span>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           {loading && (
             <div style={{ textAlign: "center", padding: 40, color: C.t3 }}>Loading questions…</div>
           )}
-          {!loading && filtered.length === 0 && (
+          {!loading && fetchError && (
+            <div style={{ margin: 12, padding: "12px 16px", borderRadius: 10,
+              background: "#FF4D6A15", border: "1px solid #FF4D6A40" }}>
+              <p style={{ color: "#FF4D6A", fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>⚠️ Fetch error</p>
+              <p style={{ color: "#FF4D6A99", fontSize: 12, margin: 0 }}>{fetchError}</p>
+              <p style={{ color: C.t3, fontSize: 11, margin: "8px 0 0" }}>
+                Querying org: <code style={{ color: C.t2 }}>{orgId}</code>
+              </p>
+            </div>
+          )}
+          {!loading && !fetchError && filtered.length === 0 && (
             <div style={{ textAlign: "center", padding: 40 }}>
-              <p style={{ color: C.t3, fontSize: 14 }}>No questions yet.</p>
-              <p style={{ color: C.t3, fontSize: 12, marginTop: 8 }}>Ask something in Discord #help to see it here!</p>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>💬</div>
+              <p style={{ color: C.t2, fontSize: 14, marginBottom: 6 }}>No questions found yet.</p>
+              <p style={{ color: C.t3, fontSize: 12, lineHeight: 1.6 }}>
+                Make sure your bot is online in Railway, then ask something in your Discord #help channel.
+              </p>
+              <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8,
+                background: C.surface, border: `1px solid ${C.border}`, textAlign: "left" }}>
+                <p style={{ color: C.t3, fontSize: 11, margin: "0 0 4px" }}>Querying org ID:</p>
+                <code style={{ color: C.accent, fontSize: 11 }}>{orgId}</code>
+                <p style={{ color: C.t3, fontSize: 11, margin: "8px 0 0" }}>
+                  This must match the DEFAULT_ORG_ID in your Railway bot env vars.
+                </p>
+              </div>
+              {lastFetch && <p style={{ color: C.t3, fontSize: 11, marginTop: 10 }}>Last checked: {lastFetch.toLocaleTimeString()}</p>}
             </div>
           )}
           {filtered.map(item => (
@@ -1726,7 +1783,7 @@ function InsightsTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
 }
 
 /* ─────────────────────────────────── ROOT ──────────────────────────────── */
-function Dashboard({ agentConfig = {}, orgId, onGoToOnboarding }) {
+function Dashboard({ agentConfig = {}, orgId, onGoToOnboarding, onLogout }) {
   // Use org from onboarding if available, otherwise fall back to demo org
   const ACTIVE_ORG = orgId || ORG_ID;
   const [tab, setTab] = useState("qa");
@@ -1780,6 +1837,16 @@ function Dashboard({ agentConfig = {}, orgId, onGoToOnboarding }) {
           <span style={{ fontSize: 11, color: C.green, fontWeight: 500 }}>Live · Discord Active</span>
         </div>
         <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+        {onLogout && (
+          <button onClick={onLogout} title="Sign out / reset"
+            style={{ marginLeft: "auto", fontSize: 11, padding: "5px 14px", borderRadius: 20,
+              background: "transparent", border: `1px solid ${C.border}`, color: C.t3,
+              cursor: "pointer", fontWeight: 500, transition: "all .2s" }}
+            onMouseOver={e => { e.target.style.borderColor = C.red; e.target.style.color = C.red; }}
+            onMouseOut={e => { e.target.style.borderColor = C.border; e.target.style.color = C.t3; }}>
+            ⎋ Sign out
+          </button>
+        )}
       </div>
       <div style={{ display: "flex", padding: "0 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0, background: C.surface }}>
         {tabs.map(t => (
