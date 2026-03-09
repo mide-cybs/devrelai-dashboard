@@ -24,9 +24,9 @@ export default function App() {
     );
   }
   if (screen === "onboarding") {
-    return <Onboarding onLaunch={handleLaunch} />;
+    return <Onboarding onLaunch={handleLaunch} onGoToLanding={() => setScreen("landing")} />;
   }
-  return <Dashboard agentConfig={agentConfig} orgId={agentConfig.orgId} />;
+  return <Dashboard agentConfig={agentConfig} orgId={agentConfig.orgId} onGoToOnboarding={() => setScreen("onboarding")} />;
 }
 
 // ═══ LANDING PAGE ══════════════════════════════════════════════════════════
@@ -450,7 +450,7 @@ const CO = {
   green: "#00E5A0", greenDim: "#08221A",
   amber: "#FFB800", amberDim: "#221800",
   red: "#FF4D6A",
-  t1: "#ECF2FF", t2: "#5A7490", t3: "#2D4260",
+  t1: "#ECF2FF", t2: "#607C9A", t3: "#537AB1",
 };
 
 function ProgressBar({ value, color = CO.accent, height = 6 }) {
@@ -1033,7 +1033,7 @@ function Launched({ config, onOpenDashboard }) {
 }
 
 /* ─── ROOT ────────────────────────────────────────────────────────────── */
-function Onboarding({ onLaunch: onLaunchExternal }) {
+function Onboarding({ onLaunch: onLaunchExternal, onGoToLanding }) {
   const [step, setStep]     = useState(1);
   const [config, setConfig] = useState({});
   const [launched, setLaunched] = useState(false);
@@ -1057,7 +1057,7 @@ function Onboarding({ onLaunch: onLaunchExternal }) {
 
       <div style={{ width: "100%", maxWidth: 640 }}>
         {/* logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+        <div onClick={onGoToLanding} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32, cursor: "pointer", width: "fit-content" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36,
             borderRadius: 4, border: "4px solid #00C2FF", background: "#00C2FF15", flexShrink: 0 }}>
             <span style={{ fontSize: 18, fontWeight: 900, color: "#ffffff", lineHeight: 1, fontFamily: "sans-serif" }}>D</span>
@@ -1133,7 +1133,6 @@ function Onboarding({ onLaunch: onLaunchExternal }) {
 
 const BACKEND_URL = "https://devad-backend-production.up.railway.app";
 const ORG_ID = "a4a7adb5-4f62-4dea-b064-cf5677ba555d"; // default demo org
-const ORG_ID = "a4a7adb5-4f62-4dea-b064-cf5677ba555d";
 
 const C = {
   bg: "#080C12", surface: "#0E1520", surfaceHigh: "#131E2E",
@@ -1143,7 +1142,7 @@ const C = {
   amber: "#FFB800", amberDim: "#2E2200",
   red: "#FF4D6A", redDim: "#2E0A14",
   purple: "#A855F7", purpleDim: "#1A0A2E",
-  t1: "#E8F0FF", t2: "#607898", t3: "#354A65",
+  t1: "#E8F0FF", t2: "#627B9C", t3: "#597CA9",
 };
 
 function TypingDots() {
@@ -1337,14 +1336,14 @@ function QATab({ orgId = ORG_ID }) {
 }
 
 /* ─────────────────────────────── COMMUNITY FEED TAB ───────────────────────── */
-function LockedTab({ icon, title, desc, action }) {
+function LockedTab({ icon, title, desc, action, onGoToOnboarding }) {
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
       <div style={{ textAlign: "center", maxWidth: 360 }}>
         <div style={{ fontSize: 40, marginBottom: 16 }}>{icon}</div>
         <h3 style={{ fontSize: 18, fontWeight: 700, color: C.t1, marginBottom: 8 }}>{title}</h3>
         <p style={{ fontSize: 14, color: C.t2, lineHeight: 1.6, marginBottom: 24 }}>{desc}</p>
-        <button onClick={() => window.location.reload()}
+        <button onClick={onGoToOnboarding}
           style={{ padding: "11px 28px", borderRadius: 10, border: "none", cursor: "pointer",
             background: `linear-gradient(135deg,${C.accent},#0070CC)`,
             color: "#fff", fontSize: 14, fontWeight: 600 }}>
@@ -1355,11 +1354,12 @@ function LockedTab({ icon, title, desc, action }) {
   );
 }
 
-function FeedTab({ isSkipped, orgId = ORG_ID }) {
+function FeedTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
   if (isSkipped) return <LockedTab icon="🌐"
     title="Connect your community"
     desc="Complete the setup wizard to connect Discord, Slack or GitHub. Questions asked in your community will appear here in real time."
-    action="Complete Setup →" />;
+    action="Complete Setup →"
+    onGoToOnboarding={onGoToOnboarding} />;
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -1463,11 +1463,12 @@ function FeedTab({ isSkipped, orgId = ORG_ID }) {
 }
 
 /* ────────────────────────── KNOWLEDGE BASE TAB ─────────────────────────── */
-function KBTab({ isSkipped, orgId = ORG_ID }) {
+function KBTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
   if (isSkipped) return <LockedTab icon="🧠"
     title="Add your knowledge base"
     desc="Complete setup to connect your docs, GitHub repo and community Q&A. Your AI will use these to give accurate, specific answers."
-    action="Complete Setup →" />;
+    action="Complete Setup →"
+    onGoToOnboarding={onGoToOnboarding} />;
   const [sources, setSources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addUrl, setAddUrl] = useState("");
@@ -1571,11 +1572,12 @@ function KBTab({ isSkipped, orgId = ORG_ID }) {
 }
 
 /* ─────────────────────────────── INSIGHTS TAB ──────────────────────────── */
-function InsightsTab({ isSkipped, orgId = ORG_ID }) {
+function InsightsTab({ isSkipped, orgId = ORG_ID, onGoToOnboarding }) {
   if (isSkipped) return <LockedTab icon="📊"
     title="Insights unlock after setup"
     desc="Once your community is connected and questions start flowing in, you'll see metrics, pain points and trends from your developer community here."
-    action="Complete Setup →" />;
+    action="Complete Setup →"
+    onGoToOnboarding={onGoToOnboarding} />;
   const [metrics, setMetrics] = useState(null);
   const [painPoints, setPainPoints] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1655,7 +1657,7 @@ function InsightsTab({ isSkipped, orgId = ORG_ID }) {
 }
 
 /* ─────────────────────────────────── ROOT ──────────────────────────────── */
-function Dashboard({ agentConfig = {}, orgId }) {
+function Dashboard({ agentConfig = {}, orgId, onGoToOnboarding }) {
   // Use org from onboarding if available, otherwise fall back to demo org
   const ACTIVE_ORG = orgId || ORG_ID;
   const [tab, setTab] = useState("qa");
@@ -1683,7 +1685,7 @@ function Dashboard({ agentConfig = {}, orgId }) {
             You skipped setup — the <strong>Ask DevRel</strong> tab works now.
             Complete setup to unlock Community, Knowledge Base and Insights.
           </span>
-          <button onClick={() => window.location.reload()}
+          <button onClick={onGoToOnboarding}
             style={{ fontSize: 12, padding: "4px 14px", borderRadius: 20, background: "#FFB80020",
               border: "1px solid #FFB80040", color: "#FFB800", cursor: "pointer", whiteSpace: "nowrap", fontWeight: 600 }}>
             Complete Setup
@@ -1723,9 +1725,9 @@ function Dashboard({ agentConfig = {}, orgId }) {
       </div>
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {tab === "qa"       && <QATab orgId={ACTIVE_ORG} />}
-        {tab === "feed"     && <FeedTab isSkipped={isSkipped} orgId={ACTIVE_ORG} />}
-        {tab === "kb"       && <KBTab isSkipped={isSkipped} orgId={ACTIVE_ORG} />}
-        {tab === "insights" && <InsightsTab isSkipped={isSkipped} orgId={ACTIVE_ORG} />}
+        {tab === "feed"     && <FeedTab isSkipped={isSkipped} orgId={ACTIVE_ORG} onGoToOnboarding={onGoToOnboarding} />}
+        {tab === "kb"       && <KBTab isSkipped={isSkipped} orgId={ACTIVE_ORG} onGoToOnboarding={onGoToOnboarding} />}
+        {tab === "insights" && <InsightsTab isSkipped={isSkipped} orgId={ACTIVE_ORG} onGoToOnboarding={onGoToOnboarding} />}
       </div>
     </div>
   );
