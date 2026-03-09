@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from "react";
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function App() {
-  const [screen, setScreen] = useState("onboarding");
+  const [screen, setScreen] = useState("landing");
   const [agentConfig, setAgentConfig] = useState({});
 
   function handleLaunch(config) {
@@ -15,9 +15,429 @@ export default function App() {
     setScreen("dashboard");
   }
 
-  return screen === "onboarding"
-    ? <Onboarding onLaunch={handleLaunch} />
-    : <Dashboard agentConfig={agentConfig} />;
+  if (screen === "landing") {
+    return (
+      <LandingPage
+        onStartOnboarding={() => setScreen("onboarding")}
+        onJumpToDashboard={() => setScreen("dashboard")}
+      />
+    );
+  }
+  if (screen === "onboarding") {
+    return <Onboarding onLaunch={handleLaunch} />;
+  }
+  return <Dashboard agentConfig={agentConfig} orgId={agentConfig.orgId} />;
+}
+
+// ═══ LANDING PAGE ══════════════════════════════════════════════════════════
+
+function LandingPage({ onStartOnboarding, onJumpToDashboard }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [typedText, setTypedText] = useState("");
+  const fullText = "Your AI Developer Advocate — answering developer questions 24/7 so your team doesn't have to.";
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i <= fullText.length) {
+        setTypedText(fullText.slice(0, i));
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 22);
+    return () => clearInterval(interval);
+  }, []);
+
+  const features = [
+    {
+      icon: "⚡",
+      title: "Instant Answers",
+      desc: "Responds to developer questions in seconds — on Discord, Slack, or your own dashboard. No waiting, no tickets.",
+    },
+    {
+      icon: "🧠",
+      title: "Learns Your Docs",
+      desc: "Feed it your documentation, changelogs, and FAQs. DEVAD answers from your knowledge base — not generic AI.",
+    },
+    {
+      icon: "📊",
+      title: "Community Insights",
+      desc: "See what developers struggle with most. Discover gaps in your docs. Make data-driven decisions about what to build next.",
+    },
+    {
+      icon: "🔌",
+      title: "Plug Into Discord",
+      desc: "Connect your Discord server in 2 minutes. DEVAD monitors support channels and replies automatically.",
+    },
+    {
+      icon: "🎯",
+      title: "Confidence Scoring",
+      desc: "Every answer comes with a confidence score. Low confidence? The question escalates to your team automatically.",
+    },
+    {
+      icon: "🚀",
+      title: "Zero Engineering",
+      desc: "Set up in under 10 minutes. No code, no infrastructure, no DevOps. Just connect and go.",
+    },
+  ];
+
+  const steps = [
+    { n: "01", title: "Connect Your Docs", desc: "Paste your documentation URL — DEVAD crawls and learns everything." },
+    { n: "02", title: "Link Your Community", desc: "Connect your Discord server with one invite link." },
+    { n: "03", title: "Configure Your Agent", desc: "Set the name, tone, and confidence threshold that fits your brand." },
+    { n: "04", title: "Go Live", desc: "Your AI DevRel is now answering developer questions around the clock." },
+  ];
+
+  const s = {
+    page: {
+      fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+      background: CO.bg,
+      color: CO.t1,
+      minHeight: "100vh",
+      overflowX: "hidden",
+    },
+    nav: {
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      padding: "0 40px",
+      height: 64,
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      background: scrolled ? "rgba(6,9,16,0.95)" : "transparent",
+      backdropFilter: scrolled ? "blur(12px)" : "none",
+      borderBottom: scrolled ? `1px solid ${CO.border}` : "none",
+      transition: "all 0.3s ease",
+    },
+    logo: {
+      display: "flex", alignItems: "center", gap: 10,
+    },
+    logoBox: {
+      width: 32, height: 32, borderRadius: 6,
+      border: `2px solid ${CO.accent}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 14, fontWeight: 900, color: CO.accent,
+      boxShadow: `0 0 12px ${CO.accent}40`,
+    },
+    logoText: { fontSize: 16, fontWeight: 700, color: CO.t1, letterSpacing: "0.05em" },
+    hero: {
+      minHeight: "100vh",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      textAlign: "center",
+      padding: "120px 24px 80px",
+      position: "relative",
+    },
+    heroBadge: {
+      display: "inline-flex", alignItems: "center", gap: 8,
+      padding: "6px 16px", borderRadius: 20,
+      border: `1px solid ${CO.accent}40`,
+      background: CO.accentDim,
+      fontSize: 11, fontWeight: 600, color: CO.accent,
+      letterSpacing: "0.1em", textTransform: "uppercase",
+      marginBottom: 32,
+      animation: "fadeInDown 0.6s ease",
+    },
+    heroTitle: {
+      fontSize: "clamp(36px, 7vw, 80px)",
+      fontWeight: 900,
+      lineHeight: 1.05,
+      letterSpacing: "-0.03em",
+      marginBottom: 24,
+      animation: "fadeInUp 0.7s ease 0.1s both",
+    },
+    heroSub: {
+      fontSize: "clamp(14px, 2vw, 18px)",
+      color: CO.t2,
+      maxWidth: 560,
+      lineHeight: 1.7,
+      marginBottom: 48,
+      minHeight: "3em",
+      animation: "fadeInUp 0.7s ease 0.2s both",
+    },
+    ctaRow: {
+      display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center",
+      animation: "fadeInUp 0.7s ease 0.3s both",
+    },
+    ctaPrimary: {
+      padding: "14px 32px", borderRadius: 10,
+      border: "none", cursor: "pointer",
+      background: `linear-gradient(135deg, ${CO.accent}, #0090C8)`,
+      color: "#000", fontSize: 14, fontWeight: 800,
+      letterSpacing: "0.02em",
+      boxShadow: `0 0 30px ${CO.accent}50`,
+      transition: "all 0.2s",
+    },
+    ctaSecondary: {
+      padding: "14px 32px", borderRadius: 10,
+      border: `1px solid ${CO.border}`, cursor: "pointer",
+      background: "transparent",
+      color: CO.t1, fontSize: 14, fontWeight: 600,
+      transition: "all 0.2s",
+    },
+    terminalWrap: {
+      margin: "80px auto 0",
+      maxWidth: 680, width: "100%",
+      borderRadius: 14,
+      border: `1px solid ${CO.border}`,
+      background: CO.surface,
+      overflow: "hidden",
+      boxShadow: `0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px ${CO.border}`,
+      animation: "fadeInUp 0.8s ease 0.4s both",
+    },
+    terminalBar: {
+      padding: "10px 16px",
+      background: CO.surfaceHigh,
+      borderBottom: `1px solid ${CO.border}`,
+      display: "flex", alignItems: "center", gap: 8,
+    },
+    terminalDot: (color) => ({
+      width: 10, height: 10, borderRadius: "50%", background: color,
+    }),
+    terminalTitle: { fontSize: 11, color: CO.t2, marginLeft: 8 },
+    terminalBody: { padding: 24, fontSize: 12, lineHeight: 2 },
+    section: {
+      maxWidth: 1100, margin: "0 auto", padding: "100px 24px",
+    },
+    sectionLabel: {
+      fontSize: 11, fontWeight: 700, letterSpacing: "0.15em",
+      textTransform: "uppercase", color: CO.accent,
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: "clamp(28px, 4vw, 48px)",
+      fontWeight: 900, lineHeight: 1.1,
+      letterSpacing: "-0.02em", marginBottom: 16,
+    },
+    sectionSub: {
+      fontSize: 15, color: CO.t2, lineHeight: 1.7, maxWidth: 560,
+    },
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+      gap: 20, marginTop: 60,
+    },
+    card: {
+      padding: 28, borderRadius: 14,
+      border: `1px solid ${CO.border}`,
+      background: CO.surface,
+      transition: "border-color 0.2s, transform 0.2s",
+      cursor: "default",
+    },
+    cardIcon: {
+      fontSize: 28, marginBottom: 16,
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: 52, height: 52, borderRadius: 12,
+      background: CO.accentDim,
+      border: `1px solid ${CO.accent}30`,
+    },
+    cardTitle: { fontSize: 15, fontWeight: 700, marginBottom: 8, color: CO.t1 },
+    cardDesc: { fontSize: 13, color: CO.t2, lineHeight: 1.7 },
+    stepsGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+      gap: 2, marginTop: 60,
+    },
+    stepCard: {
+      padding: "32px 28px",
+      background: CO.surface,
+      border: `1px solid ${CO.border}`,
+      position: "relative",
+    },
+    stepNum: {
+      fontSize: 48, fontWeight: 900, color: CO.border,
+      lineHeight: 1, marginBottom: 16,
+      fontFamily: "'IBM Plex Mono', monospace",
+    },
+    stepTitle: { fontSize: 15, fontWeight: 700, marginBottom: 8 },
+    stepDesc: { fontSize: 13, color: CO.t2, lineHeight: 1.7 },
+    divider: {
+      height: 1, background: `linear-gradient(90deg, transparent, ${CO.border}, transparent)`,
+      margin: "0 24px",
+    },
+    finalCta: {
+      textAlign: "center", padding: "100px 24px",
+      background: `radial-gradient(ellipse 80% 50% at 50% 50%, ${CO.accentDim}, transparent)`,
+    },
+    footer: {
+      borderTop: `1px solid ${CO.border}`,
+      padding: "32px 40px",
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      flexWrap: "wrap", gap: 16,
+    },
+    footerLeft: { display: "flex", alignItems: "center", gap: 12 },
+    footerText: { fontSize: 12, color: CO.t3 },
+  };
+
+  return (
+    <div style={s.page}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700;900&display=swap');
+        @keyframes fadeInDown { from { opacity:0; transform:translateY(-16px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0 } }
+        @keyframes glow { 0%,100% { box-shadow:0 0 20px #00C2FF30 } 50% { box-shadow:0 0 40px #00C2FF60 } }
+        .cta-primary:hover { transform:translateY(-2px); box-shadow:0 0 50px #00C2FF70 !important; }
+        .cta-secondary:hover { border-color:#283D60 !important; background:#0C1420 !important; }
+        .feat-card:hover { border-color:#283D60 !important; transform:translateY(-3px); }
+        .cursor { display:inline-block; width:2px; height:1em; background:#00C2FF; animation:pulse 1s infinite; vertical-align:middle; margin-left:2px; }
+        * { box-sizing:border-box; margin:0; padding:0; }
+      `}</style>
+
+      {/* NAV */}
+      <nav style={s.nav}>
+        <div style={s.logo}>
+          <div style={s.logoBox}>D</div>
+          <span style={s.logoText}>DEVAD</span>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="cta-secondary" onClick={onJumpToDashboard}
+            style={s.ctaSecondary}>
+            Demo Dashboard
+          </button>
+          <button className="cta-primary" onClick={onStartOnboarding}
+            style={s.ctaPrimary}>
+            Get Started Free →
+          </button>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <section style={s.hero}>
+        {/* Grid background */}
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 0,
+          backgroundImage: `linear-gradient(${CO.border}30 1px, transparent 1px), linear-gradient(90deg, ${CO.border}30 1px, transparent 1px)`,
+          backgroundSize: "60px 60px",
+          maskImage: "radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent)",
+        }} />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div style={s.heroBadge}>
+            <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: CO.green, animation: "pulse 2s infinite" }} />
+            AI-Powered Developer Relations
+          </div>
+          <h1 style={s.heroTitle}>
+            <span style={{ color: CO.t1 }}>Stop Answering</span><br />
+            <span style={{ background: `linear-gradient(135deg, ${CO.accent}, ${CO.green})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              The Same Questions
+            </span>
+          </h1>
+          <p style={s.heroSub}>
+            {typedText}<span className="cursor" />
+          </p>
+          <div style={s.ctaRow}>
+            <button className="cta-primary" onClick={onStartOnboarding} style={s.ctaPrimary}>
+              Connect Your Community →
+            </button>
+            <button className="cta-secondary" onClick={onJumpToDashboard} style={s.ctaSecondary}>
+              Try the Dashboard
+            </button>
+          </div>
+
+          {/* Terminal demo */}
+          <div style={s.terminalWrap}>
+            <div style={s.terminalBar}>
+              <div style={s.terminalDot("#FF5F57")} />
+              <div style={s.terminalDot("#FFBD2E")} />
+              <div style={s.terminalDot("#28CA42")} />
+              <span style={s.terminalTitle}>devad — discord #help</span>
+            </div>
+            <div style={s.terminalBody}>
+              <div><span style={{ color: CO.t3 }}>devuser_42 </span><span style={{ color: CO.t2 }}>→ #help</span></div>
+              <div style={{ color: CO.t2, paddingLeft: 16, margin: "4px 0" }}>
+                How do I authenticate with your API using OAuth2?
+              </div>
+              <div style={{ marginTop: 12 }}><span style={{ color: CO.accent }}>DEVAD</span><span style={{ color: CO.t3 }}> [bot] → #help</span></div>
+              <div style={{ color: CO.t1, paddingLeft: 16, marginTop: 4, lineHeight: 1.8 }}>
+                Great question! Here's how OAuth2 works with our API:<br />
+                <span style={{ color: CO.green }}>1.</span> Request an authorization code at <span style={{ color: CO.accent }}>/oauth/authorize</span><br />
+                <span style={{ color: CO.green }}>2.</span> Exchange it for a token at <span style={{ color: CO.accent }}>/oauth/token</span><br />
+                <span style={{ color: CO.green }}>3.</span> Include <span style={{ color: CO.accent }}>Bearer {"<token>"}</span> in your headers<br />
+                <span style={{ color: CO.t2, fontSize: 11 }}>📚 Full guide: docs.example.com/auth/oauth2 · Confidence: 94%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div style={s.divider} />
+
+      {/* FEATURES */}
+      <section style={s.section}>
+        <div style={s.sectionLabel}>Features</div>
+        <h2 style={s.sectionTitle}>Everything your DevRel<br />team needs, automated.</h2>
+        <p style={s.sectionSub}>From instant answers to deep community insights — DEVAD handles the repetitive work so your team can focus on building relationships.</p>
+        <div style={s.grid}>
+          {features.map((f) => (
+            <div key={f.title} className="feat-card" style={s.card}>
+              <div style={s.cardIcon}>{f.icon}</div>
+              <div style={s.cardTitle}>{f.title}</div>
+              <div style={s.cardDesc}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div style={s.divider} />
+
+      {/* HOW IT WORKS */}
+      <section style={{ ...s.section, paddingTop: 100 }}>
+        <div style={s.sectionLabel}>How It Works</div>
+        <h2 style={s.sectionTitle}>Live in under<br />10 minutes.</h2>
+        <div style={s.stepsGrid}>
+          {steps.map((step, i) => (
+            <div key={step.n} style={{
+              ...s.stepCard,
+              borderRadius: i === 0 ? "14px 0 0 14px" : i === steps.length - 1 ? "0 14px 14px 0" : 0,
+            }}>
+              <div style={s.stepNum}>{step.n}</div>
+              <div style={s.stepTitle}>{step.title}</div>
+              <div style={s.stepDesc}>{step.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div style={s.divider} />
+
+      {/* FINAL CTA */}
+      <section style={s.finalCta}>
+        <div style={s.sectionLabel}>Get Started</div>
+        <h2 style={{ ...s.sectionTitle, marginBottom: 16 }}>
+          Ready to scale your<br />developer community?
+        </h2>
+        <p style={{ ...s.sectionSub, margin: "0 auto 40px", textAlign: "center" }}>
+          Join developer teams already using DEVAD to answer questions faster, reduce support load, and ship better documentation.
+        </p>
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+          <button className="cta-primary" onClick={onStartOnboarding}
+            style={{ ...s.ctaPrimary, padding: "16px 40px", fontSize: 15 }}>
+            Connect Your Community →
+          </button>
+          <button className="cta-secondary" onClick={onJumpToDashboard}
+            style={{ ...s.ctaSecondary, padding: "16px 40px", fontSize: 15 }}>
+            Explore the Dashboard
+          </button>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={s.footer}>
+        <div style={s.footerLeft}>
+          <div style={{ ...s.logoBox, width: 24, height: 24, fontSize: 11 }}>D</div>
+          <span style={s.footerText}>DEVAD — AI Developer Advocate</span>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={s.footerText}>Made by <span style={{ color: CO.t2, fontWeight: 600 }}>Mide Oyekale</span> · © 2026 Axentis Global</div>
+          <div style={{ ...s.footerText, marginTop: 4 }}>Built on Railway + Vercel + Supabase</div>
+        </div>
+      </footer>
+    </div>
+  );
 }
 
 // ═══ ONBOARDING ═══════════════════════════════════════════════════════════
@@ -531,7 +951,25 @@ This is a live onboarding test to show the customer what their agent will be lik
             {config.pageCount || "14"} pages indexed · {platforms.length || 1} platform{platforms.length !== 1 ? "s" : ""} connected · {config.agentName || "DevBot"} configured
           </p>
         </div>
-        <button onClick={onLaunch}
+        <button onClick={async () => {
+            try {
+              const res = await fetch(`${BACKEND_URL}/orgs/create`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: config.agentName || "My Company",
+                  agent_name: config.agentName || "DevBot",
+                  tone: config.tone || "friendly",
+                  confidence_threshold: config.threshold || 80,
+                }),
+              });
+              const data = await res.json();
+              onLaunch({ ...config, orgId: data.org_id });
+            } catch (e) {
+              // Fall back to default org if API fails
+              onLaunch({ ...config, orgId: ORG_ID });
+            }
+          }}
           style={{ padding: "10px 24px", borderRadius: 10, border: "none", cursor: "pointer",
             background: `linear-gradient(135deg,${CO.green},#00A070)`,
             color: "#fff", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}>
@@ -694,6 +1132,7 @@ function Onboarding({ onLaunch: onLaunchExternal }) {
 // ═══════════════════════════════════════════════════════════
 
 const BACKEND_URL = "https://devad-backend-production.up.railway.app";
+const ORG_ID = "a4a7adb5-4f62-4dea-b064-cf5677ba555d"; // default demo org
 const ORG_ID = "a4a7adb5-4f62-4dea-b064-cf5677ba555d";
 
 const C = {
@@ -760,7 +1199,7 @@ function Card({ children, style = {} }) {
 }
 
 /* ─────────────────────────────────── Q&A TAB ──────────────────────────────── */
-function QATab() {
+function QATab({ orgId = ORG_ID }) {
   const [msgs, setMsgs] = useState([{
     role: "assistant",
     content: "Hey 👋 I'm your AI Developer Advocate. Ask me anything about the API — authentication, rate limits, webhooks, SDKs, or integration patterns.",
@@ -781,7 +1220,7 @@ function QATab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          org_id: ORG_ID,
+          org_id: orgId,
           platform: "dashboard",
           channel: "#dashboard",
           author_username: "DevRel User",
@@ -916,7 +1355,7 @@ function LockedTab({ icon, title, desc, action }) {
   );
 }
 
-function FeedTab({ isSkipped }) {
+function FeedTab({ isSkipped, orgId = ORG_ID }) {
   if (isSkipped) return <LockedTab icon="🌐"
     title="Connect your community"
     desc="Complete the setup wizard to connect Discord, Slack or GitHub. Questions asked in your community will appear here in real time."
@@ -929,7 +1368,7 @@ function FeedTab({ isSkipped }) {
   useEffect(() => {
     async function fetchQuestions() {
       try {
-        const res = await fetch(`${BACKEND_URL}/questions/${ORG_ID}?limit=50`);
+        const res = await fetch(`${BACKEND_URL}/questions/${orgId}?limit=50`);
         const data = await res.json();
         setQuestions(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -1024,7 +1463,7 @@ function FeedTab({ isSkipped }) {
 }
 
 /* ────────────────────────── KNOWLEDGE BASE TAB ─────────────────────────── */
-function KBTab({ isSkipped }) {
+function KBTab({ isSkipped, orgId = ORG_ID }) {
   if (isSkipped) return <LockedTab icon="🧠"
     title="Add your knowledge base"
     desc="Complete setup to connect your docs, GitHub repo and community Q&A. Your AI will use these to give accurate, specific answers."
@@ -1038,7 +1477,7 @@ function KBTab({ isSkipped }) {
   useEffect(() => {
     async function fetchSources() {
       try {
-        const res = await fetch(`${BACKEND_URL}/knowledge/sources/${ORG_ID}`);
+        const res = await fetch(`${BACKEND_URL}/knowledge/sources/${orgId}`);
         const data = await res.json();
         setSources(Array.isArray(data) ? data : []);
       } catch {
@@ -1057,7 +1496,7 @@ function KBTab({ isSkipped }) {
       const res = await fetch(`${BACKEND_URL}/knowledge/ingest/docs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ org_id: ORG_ID, label, url: addUrl, max_pages: 50 }),
+        body: JSON.stringify({ org_id: orgId, label, url: addUrl, max_pages: 50 }),
       });
       const data = await res.json();
       setSources(p => [...p, { id: data.source_id, label, url: addUrl, status: "crawling", chunks: 0 }]);
@@ -1132,7 +1571,7 @@ function KBTab({ isSkipped }) {
 }
 
 /* ─────────────────────────────── INSIGHTS TAB ──────────────────────────── */
-function InsightsTab({ isSkipped }) {
+function InsightsTab({ isSkipped, orgId = ORG_ID }) {
   if (isSkipped) return <LockedTab icon="📊"
     title="Insights unlock after setup"
     desc="Once your community is connected and questions start flowing in, you'll see metrics, pain points and trends from your developer community here."
@@ -1145,8 +1584,8 @@ function InsightsTab({ isSkipped }) {
     async function fetchData() {
       try {
         const [mRes, pRes] = await Promise.all([
-          fetch(`${BACKEND_URL}/analytics/${ORG_ID}/metrics`),
-          fetch(`${BACKEND_URL}/analytics/${ORG_ID}/pain-points`),
+          fetch(`${BACKEND_URL}/analytics/${orgId}/metrics`),
+          fetch(`${BACKEND_URL}/analytics/${orgId}/pain-points`),
         ]);
         const m = await mRes.json();
         const p = await pRes.json();
@@ -1216,7 +1655,9 @@ function InsightsTab({ isSkipped }) {
 }
 
 /* ─────────────────────────────────── ROOT ──────────────────────────────── */
-function Dashboard({ agentConfig = {} }) {
+function Dashboard({ agentConfig = {}, orgId }) {
+  // Use org from onboarding if available, otherwise fall back to demo org
+  const ACTIVE_ORG = orgId || ORG_ID;
   const [tab, setTab] = useState("qa");
   const tabs = [
     { id:"qa",       l:"Ask DevRel",     ic:"💬" },
@@ -1281,10 +1722,10 @@ function Dashboard({ agentConfig = {} }) {
         ))}
       </div>
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        {tab === "qa"       && <QATab />}
-        {tab === "feed"     && <FeedTab isSkipped={isSkipped} />}
-        {tab === "kb"       && <KBTab isSkipped={isSkipped} />}
-        {tab === "insights" && <InsightsTab isSkipped={isSkipped} />}
+        {tab === "qa"       && <QATab orgId={ACTIVE_ORG} />}
+        {tab === "feed"     && <FeedTab isSkipped={isSkipped} orgId={ACTIVE_ORG} />}
+        {tab === "kb"       && <KBTab isSkipped={isSkipped} orgId={ACTIVE_ORG} />}
+        {tab === "insights" && <InsightsTab isSkipped={isSkipped} orgId={ACTIVE_ORG} />}
       </div>
     </div>
   );
