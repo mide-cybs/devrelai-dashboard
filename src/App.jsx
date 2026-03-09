@@ -588,98 +588,167 @@ function Step1({ onNext }) {
 }
 
 /* ─── STEP 2: Connect Community ────────────────────────────────────────── */
-function Step2({ onNext, onBack }) {
-  const [connected, setConnected] = useState({});
-  const [connecting, setConnecting] = useState(null);
-  const [channels, setChannels]   = useState({ discord: "#help", slack: "#dev-support" });
+function Step2({ onNext, onBack, orgId }) {
+  const [serverId, setServerId]   = useState("");
+  const [channel, setChannel]     = useState("#help");
+  const [serverName, setServerName] = useState("");
+  const [status, setStatus]       = useState("idle"); // idle | saving | connected | error
+  const [errorMsg, setErrorMsg]   = useState("");
 
-  const platforms = [
-    { id: "discord", name: "Discord", icon: "💬", color: "#5865F2",
-      desc: "Monitor channels, auto-answer questions, post responses as a bot",
-      channelLabel: "Watch channel", channelPlaceholder: "#help" },
-    { id: "slack",   name: "Slack",   icon: "⚡", color: "#4A154B",
-      desc: "Respond in workspace channels and DMs",
-      channelLabel: "Watch channel", channelPlaceholder: "#dev-support" },
-    { id: "github",  name: "GitHub",  icon: "🐙", color: "#24292F",
-      desc: "Triage issues, answer discussions, detect docs friction",
-      channelLabel: "Repository", channelPlaceholder: "yourorg/your-repo" },
-    { id: "stackoverflow", name: "Stack Overflow", icon: "📚", color: "#F48024",
-      desc: "Monitor and answer questions tagged with your product",
-      channelLabel: "Tag", channelPlaceholder: "your-api-tag" },
-  ];
+  // Discord bot invite link — opens Discord's official OAuth modal
+  const BOT_CLIENT_ID = "1479501223081279651";
+  const DISCORD_INVITE = `https://discord.com/api/oauth2/authorize?client_id=${BOT_CLIENT_ID}&permissions=67584&scope=bot`;
 
-  async function handleConnect(id) {
-    setConnecting(id);
-    await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
-    setConnected(prev => ({ ...prev, [id]: true }));
-    setConnecting(null);
+  async function handleConnect() {
+    if (!serverId.trim()) { setErrorMsg("Please paste your Discord Server ID first."); return; }
+    setStatus("saving");
+    setErrorMsg("");
+    try {
+      const res = await fetch(`${BACKEND_URL}/integrations/discord/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_id: orgId,
+          server_id: serverId.trim(),
+          server_name: serverName.trim() || "My Discord Server",
+          channel: channel.trim() || "#help",
+        }),
+      });
+      if (res.ok) {
+        setStatus("connected");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.detail || "Connection failed. Please try again.");
+        setStatus("error");
+      }
+    } catch (e) {
+      setErrorMsg("Could not reach the backend. Check your Railway deployment.");
+      setStatus("error");
+    }
   }
 
-  const connectedCount = Object.keys(connected).length;
+  const isConnected = status === "connected";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
-        <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700, color: CO.t1 }}>Connect your community</h2>
+        <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700, color: CO.t1 }}>Connect your Discord</h2>
         <p style={{ margin: 0, fontSize: 14, color: CO.t2, lineHeight: 1.6 }}>
-          Choose where your developers live. Your agent will monitor these channels 24/7 and respond to questions automatically. Connect at least one to continue.
+          Two quick steps — invite the DEVAD bot to your server, then paste your Server ID below.
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {platforms.map(p => (
-          <div key={p.id} style={{ background: CO.surface,
-            border: `1px solid ${connected[p.id] ? CO.green + "50" : CO.border}`,
-            borderRadius: 12, padding: "14px 16px", transition: "all .2s" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: p.color + "20",
-                border: `1px solid ${p.color}30`, display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{p.icon}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: CO.t1 }}>{p.name}</span>
-                  {connected[p.id] && <Pill color={CO.green}>Connected</Pill>}
-                </div>
-                <p style={{ margin: 0, fontSize: 12, color: CO.t2 }}>{p.desc}</p>
-              </div>
-              <button
-                onClick={() => !connected[p.id] && handleConnect(p.id)}
-                disabled={!!connected[p.id] || connecting === p.id}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "none", cursor: connected[p.id] ? "default" : "pointer",
-                  background: connected[p.id] ? CO.greenDim : connecting === p.id ? CO.border : p.color + "30",
-                  color: connected[p.id] ? CO.green : connecting === p.id ? CO.t3 : p.color,
-                  fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0,
-                  border: connected[p.id] ? `1px solid ${CO.green}30` : `1px solid ${p.color}30` }}>
-                {connecting === p.id ? "Connecting…" : connected[p.id] ? "✓ Connected" : "Connect"}
-              </button>
+      {/* Step A: Invite bot */}
+      <div style={{ background: CO.surface, border: `1px solid ${CO.border}`, borderRadius: 12, padding: "18px 20px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: "#5865F220", border: "1px solid #5865F240",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: CO.t1, marginBottom: 4 }}>
+              Step 1 — Invite DEVAD bot to your server
             </div>
-
-            {connected[p.id] && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${CO.border}`,
-                display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12, color: CO.t3, whiteSpace: "nowrap" }}>{p.channelLabel}:</span>
-                <input
-                  value={channels[p.id] || p.channelPlaceholder}
-                  onChange={e => setChannels(prev => ({ ...prev, [p.id]: e.target.value }))}
-                  placeholder={p.channelPlaceholder}
-                  style={{ flex: 1, background: CO.bg, border: `1px solid ${CO.border}`, borderRadius: 8,
-                    padding: "7px 12px", color: CO.t1, fontSize: 12, outline: "none", fontFamily: "monospace" }}
-                  onFocus={e => e.target.style.borderColor = CO.accent}
-                  onBlur={e => e.target.style.borderColor = CO.border} />
-              </div>
-            )}
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: CO.t2, lineHeight: 1.6 }}>
+              Click the button below. Discord will open and ask which server to add the bot to. Select your server and click Authorise.
+            </p>
+            <a href={DISCORD_INVITE} target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px",
+                borderRadius: 8, background: "#5865F2", color: "#fff", fontSize: 13, fontWeight: 700,
+                textDecoration: "none", border: "none", cursor: "pointer" }}>
+              🔗 Open Discord — Add Bot to Server
+            </a>
           </div>
-        ))}
+        </div>
+      </div>
+
+      {/* Step B: Paste Server ID */}
+      <div style={{ background: CO.surface, border: `1px solid ${isConnected ? CO.green + "60" : CO.border}`, borderRadius: 12, padding: "18px 20px", transition: "border-color .3s" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: CO.t1, marginBottom: 4 }}>
+          Step 2 — Paste your Discord Server ID
+        </div>
+        <p style={{ margin: "0 0 14px", fontSize: 13, color: CO.t2, lineHeight: 1.6 }}>
+          In Discord: right-click your server name → <strong style={{ color: CO.t1 }}>Copy Server ID</strong>.
+          (If you don't see it, enable Developer Mode in Discord Settings → Advanced.)
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div>
+            <label style={{ fontSize: 12, color: CO.t3, display: "block", marginBottom: 6 }}>Server Name (optional)</label>
+            <input value={serverName} onChange={e => setServerName(e.target.value)}
+              placeholder="e.g. My Dev Community"
+              disabled={isConnected}
+              style={{ width: "100%", background: CO.bg, border: `1px solid ${CO.border}`, borderRadius: 8,
+                padding: "9px 12px", color: CO.t1, fontSize: 13, outline: "none", fontFamily: "inherit" }}
+              onFocus={e => e.target.style.borderColor = CO.accent}
+              onBlur={e => e.target.style.borderColor = CO.border} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: CO.t3, display: "block", marginBottom: 6 }}>Discord Server ID *</label>
+            <input value={serverId} onChange={e => setServerId(e.target.value)}
+              placeholder="e.g. 1479507293706915941"
+              disabled={isConnected}
+              style={{ width: "100%", background: CO.bg, border: `1px solid ${CO.border}`, borderRadius: 8,
+                padding: "9px 12px", color: CO.t1, fontSize: 13, outline: "none", fontFamily: "monospace" }}
+              onFocus={e => e.target.style.borderColor = CO.accent}
+              onBlur={e => e.target.style.borderColor = CO.border} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: CO.t3, display: "block", marginBottom: 6 }}>Channel to watch</label>
+            <input value={channel} onChange={e => setChannel(e.target.value)}
+              placeholder="#help"
+              disabled={isConnected}
+              style={{ width: "100%", background: CO.bg, border: `1px solid ${CO.border}`, borderRadius: 8,
+                padding: "9px 12px", color: CO.t1, fontSize: 13, outline: "none", fontFamily: "monospace" }}
+              onFocus={e => e.target.style.borderColor = CO.accent}
+              onBlur={e => e.target.style.borderColor = CO.border} />
+          </div>
+
+          {errorMsg && (
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: CO.red + "15",
+              border: `1px solid ${CO.red}40`, fontSize: 12, color: CO.red }}>{errorMsg}</div>
+          )}
+
+          {isConnected ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
+              borderRadius: 8, background: CO.greenDim, border: `1px solid ${CO.green}40` }}>
+              <span style={{ fontSize: 16 }}>✅</span>
+              <span style={{ fontSize: 13, color: CO.green, fontWeight: 600 }}>
+                Discord connected! DEVAD is now watching {channel} in your server.
+              </span>
+            </div>
+          ) : (
+            <button onClick={handleConnect} disabled={status === "saving" || !serverId.trim()}
+              style={{ padding: "11px 24px", borderRadius: 8, border: "none",
+                cursor: status === "saving" || !serverId.trim() ? "default" : "pointer",
+                background: status === "saving" || !serverId.trim() ? CO.border : `linear-gradient(135deg,#5865F2,#4752C4)`,
+                color: status === "saving" || !serverId.trim() ? CO.t3 : "#fff",
+                fontSize: 13, fontWeight: 700, alignSelf: "flex-start" }}>
+              {status === "saving" ? "Saving…" : "✓ Save Connection"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Coming soon */}
+      <div style={{ background: CO.surface, border: `1px solid ${CO.border}`, borderRadius: 12, padding: "14px 18px",
+        display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 18 }}>⚡</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: CO.t2 }}>Slack, GitHub & more — coming soon</div>
+          <div style={{ fontSize: 12, color: CO.t3 }}>Additional integrations will be available in a future update.</div>
+        </div>
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button onClick={onBack} style={{ padding: "12px 20px", borderRadius: 10, border: `1px solid ${CO.border}`,
           background: "transparent", color: CO.t2, fontSize: 14, cursor: "pointer" }}>← Back</button>
-        <button onClick={() => onNext({ connected, channels })} disabled={connectedCount === 0}
-          style={{ padding: "12px 28px", borderRadius: 10, border: "none", cursor: connectedCount > 0 ? "pointer" : "default",
-            background: connectedCount > 0 ? `linear-gradient(135deg,${CO.accent},#005FA3)` : CO.border,
-            color: connectedCount > 0 ? "#fff" : CO.t3, fontSize: 14, fontWeight: 600 }}>
-          Continue → ({connectedCount} connected)
+        <button
+          onClick={() => onNext({ connected: { discord: isConnected }, channels: { discord: channel }, serverId })}
+          disabled={!isConnected}
+          style={{ padding: "12px 28px", borderRadius: 10, border: "none",
+            cursor: isConnected ? "pointer" : "default",
+            background: isConnected ? `linear-gradient(135deg,${CO.accent},#005FA3)` : CO.border,
+            color: isConnected ? "#fff" : CO.t3, fontSize: 14, fontWeight: 600 }}>
+          Continue →
         </button>
       </div>
     </div>
@@ -1090,7 +1159,7 @@ function Onboarding({ onLaunch: onLaunchExternal, onGoToLanding }) {
             {/* step content */}
             <div style={{ background: CO.surface, border: `1px solid ${CO.border}`, borderRadius: 16, padding: 28 }}>
               {step === 1 && <Step1 onNext={next} />}
-              {step === 2 && <Step2 onNext={next} onBack={back} />}
+              {step === 2 && <Step2 onNext={next} onBack={back} orgId={config.orgId || ORG_ID} />}
               {step === 3 && <Step3 onNext={next} onBack={back} />}
               {step === 4 && <Step4 config={config} onLaunch={() => setLaunched(true)} />}
             </div>
